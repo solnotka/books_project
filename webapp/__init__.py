@@ -16,7 +16,7 @@ def create_app():
     def books():
         title = 'Здесь надо показывать сведения из чертовой базы'
         books_list = Edition.query.all()
-        return render_template('index.html', title=title)
+        return render_template('index.html', title=title, books_list=books_list)
 
     @app.route('/authors')
     def authors():
