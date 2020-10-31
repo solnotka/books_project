@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>{{ book_info }}</h2>
-    {{ publishing }}
-    {{ book_info.author_id }}
+    <h2>{{ my_book }}</h2>
+    {{ my_book.my_publishing }}
+    {{ my_book.author_id }}
+    {{ my_book.ISBN}}
 {% endblock %}
