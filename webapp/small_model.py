@@ -15,8 +15,7 @@ class Edition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     author_id = db.relationship('Author', secondary=authors, lazy='subquery', backref=db.backref('my_editions', lazy=True))
-    edition_number = db.Column(db.Integer)
-    year_of_edition = db.Column(db.DateTime, nullable=True)
+    year_of_edition = db.Column(db.String, nullable=True)
     publishing = db.Column(db.Integer, db.ForeignKey('publishing.id'), nullable=False)
     ISBN = db.Column(db.String, unique=True, nullable=False)
     cover = db.Column(db.String)
@@ -57,7 +56,7 @@ class Catalog(db.Model):
     book = db.Column(db.String, db.ForeignKey('edition.id'), nullable=False)
     point_of_sell = db.Column(db.String, db.ForeignKey('shop.id'),
                               nullable=False)
-    price = db.Column(db.Float, nullable=False)
+    price = db.Column(db.String, nullable=False)
     url = db.Column(db.String, nullable=False)
 
     def __repr__(self):

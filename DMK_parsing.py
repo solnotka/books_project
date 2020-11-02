@@ -1,10 +1,8 @@
 import requests
+
 from bs4 import BeautifulSoup
-from webapp.db import db
-from webapp.small_model import Edition, Author, Publishing, Catalog, Shop
-
-sitemap_url = requests.get('https://dmkpress.com/sitemap.xml')
-
+from webapp import db
+from webapp.small_model import Edition, Author, Publishing, Catalog, Shop, authors
 
 def get_url_list(sitemap_url):
     soup = BeautifulSoup(sitemap_url.text, 'xml')
@@ -19,7 +17,7 @@ def get_url_list(sitemap_url):
 def get_book_data(res_list):
     books_list = []
     for url in res_list:
-        soup_html = BeautifulSoup(requests.get(res).text)
+        soup_html = BeautifulSoup(requests.get(url).text)
         title = soup_html.find('h1').text
 
         # Это страховка на случай отсутствия информации
@@ -84,14 +82,61 @@ def get_book_data(res_list):
 
 
 def save_books(url):
+    # Эта функция позволяет последовательно заполнить таблицы базы в следующем порядке: Publishing,
+    # Shop, Edition (нельзя заполнить без Publishing), Author (в процессе устанавливается связь между авторами и изданиями),
+    # Catalog (можно создать только при заполненном издании)
+
     res_list = get_url_list(url)
     books_list = get_book_data(res_list)
-    for book in books_list:
-        
 
-for book in books_list[:100]:
-    print(book['res'])
-    print(book['authors_list'])
-    print(book['annotation'])
-    print(book['cover'])
-    print(book['price'])
+    publishing_exists = Publishing.query.filter(Publishing.name == 'ДМК Пресс').count()
+    if not publishing_exists:
+        new_publishing = Publishing(name='ДМК Пресс', logo='https://dmkpress.com/templates/dmk/images/logo.png',
+                                    town='Москва', url='https://dmkpress.com/',
+                                    adress='115487, г. Москва, Пр-т Андропова, д. 38')
+        db.session.add(new_publishing)
+        db.session.commit()
+    else:
+        new_publishing = Publishing.query.filter_by(name='ДМК Пресс').first()
+    
+    shop_exists = Shop.query.filter(Shop.name == 'ДМК Пресс').count()
+    if not shop_exists:
+        new_shop = Shop(name='ДМК Пресс', url='https://dmkpress.com/')
+        db.session.add(new_shop)
+        db.session.commit()
+    else:
+        new_shop = Shop.query.filter_by(name='ДМК Пресс').first()
+
+    for book in books_list:
+        edition_exists = Edition.query.filter(Edition.ISBN == book['ISBN']).count()
+        if not edition_exists:
+            title = book['title']
+            year_of_edition = book['year_of_edition']
+            ISBN = book['ISBN']
+            cover = book['cover']
+            annotation = book['annotation']
+            publishing = new_publishing.id
+            new_edition = Edition(title=title,
+                                  year_of_edition=year_of_edition, ISBN=ISBN,
+                                  cover=cover, annotation=annotation,
+                                  publishing=publishing)
+            db.session.add(new_edition)
+            db.session.commit()
+        else:
+            new_edition = Edition.query.filter_by(ISBN=book['ISBN']).first()
+
+        for author in book['authors_list']:
+            author_exists = Author.query.filter(Author.pseudonim == author).count()
+            if not author_exists:
+                new_author = Author(pseudonim=author, real_name=author)
+                db.session.add(new_author)
+                db.session.commit()
+            else:
+                new_author = Author.query.filter_by(pseudonim=author).first()
+            new_author.editions.append(new_edition)
+
+        new_catalog = Catalog(book=new_edition.id,
+                              point_of_sell=new_shop.id,
+                              price=book['price'], url=book['url'])
+        db.session.add(new_catalog)
+        db.session.commit()
