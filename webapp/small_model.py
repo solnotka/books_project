@@ -66,6 +66,7 @@ class Catalog(db.Model):
 class Shop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
+    logo = db.Column(db.String)
     url = db.Column(db.String, unique=True, nullable=False)
     adress = db.Column(db.String)
     items = db.relationship('Catalog', backref='my_shop')

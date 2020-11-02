@@ -48,11 +48,12 @@ def get_book_data(res_list):
                 ISBN = info_list[i + 1]
                 for number in ISBN:
                     if number.isalpha():
-                        ISBN = (ISBN.replace(number, '')).strip()
+                        ISBN = ISBN.replace(number, '')
+                ISBN = ISBN.strip()
 
         annotation_card = soup_html.find('div', class_='card-note')
         if annotation_card:
-            annotation = str(annotation_card.text).replace('Аннотация', '')
+            annotation = (str(annotation_card.text).replace('Аннотация', '')).strip()
         else:
             annotation = 'Аннотация не найдена'
 
@@ -101,7 +102,7 @@ def save_books(url):
     
     shop_exists = Shop.query.filter(Shop.name == 'ДМК Пресс').count()
     if not shop_exists:
-        new_shop = Shop(name='ДМК Пресс', url='https://dmkpress.com/')
+        new_shop = Shop(name='ДМК Пресс', logo='https://dmkpress.com/templates/dmk/images/logo.png', url='https://dmkpress.com/')
         db.session.add(new_shop)
         db.session.commit()
     else:
@@ -135,8 +136,10 @@ def save_books(url):
                 new_author = Author.query.filter_by(pseudonim=author).first()
             new_author.editions.append(new_edition)
 
-        new_catalog = Catalog(book=new_edition.id,
-                              point_of_sell=new_shop.id,
-                              price=book['price'], url=book['url'])
-        db.session.add(new_catalog)
-        db.session.commit()
+        item_exists = Catalog.query.filter(Catalog.url == book['url']).count()
+        if not edition_exists:
+            new_catalog = Catalog(book=new_edition.id,
+                                  point_of_sell=new_shop.id,
+                                  price=book['price'], url=book['url'])
+            db.session.add(new_catalog)
+            db.session.commit()
