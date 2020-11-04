@@ -60,7 +60,7 @@ class Catalog(db.Model):
     url = db.Column(db.String, nullable=False)
 
     def __repr__(self):
-        return f'<Catalog: {self.book}, {self.point_of_sell}>'
+        return f'{self.book}, {self.point_of_sell}'
 
 
 class Shop(db.Model):

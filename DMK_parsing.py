@@ -2,8 +2,7 @@ import requests
 
 from bs4 import BeautifulSoup
 from webapp import db
-from webapp.small_model import Edition, Author, Publishing, Catalog, Shop, authors
-
+from webapp.small_model import Edition, Author, Publishing, Catalog, Shop
 def get_url_list(sitemap_url):
     soup = BeautifulSoup(sitemap_url.text, 'xml')
     catalogs = soup.find_all('loc')
@@ -35,7 +34,7 @@ def get_book_data(res_list):
                 info_list = str(info_block.text).split(':')
         for i in range(len(info_list)):
             if 'Автор' in info_list[i]:
-                authors = (info_list[i + 1]).replace('Дата выхода', ''). replace('Формат', '')
+                authors = (info_list[i + 1]).replace('Дата выхода', '').replace('Формат', '')
                 authors_list = str(authors).split(',')
                 for i in range(len(authors_list)):
                     authors_list[i] = authors_list[i].strip()
@@ -77,7 +76,7 @@ def get_book_data(res_list):
                 'year_of_edition': year_of_edition, 'ISBN': ISBN,
                 'annotation': annotation, 'cover': cover, 'price': price}
         
-        books_list.append(book)
+        books_data_set.append(book)
     
     return books_list
 
@@ -137,9 +136,12 @@ def save_books(url):
             new_author.editions.append(new_edition)
 
         item_exists = Catalog.query.filter(Catalog.url == book['url']).count()
-        if not edition_exists:
+        if not item_exists:
             new_catalog = Catalog(book=new_edition.id,
                                   point_of_sell=new_shop.id,
                                   price=book['price'], url=book['url'])
             db.session.add(new_catalog)
             db.session.commit()
+        else:
+            new_catalog = Catalog.query.filter_by(url=book['url']).first()
+            new_catalog.price = book['price']

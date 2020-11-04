@@ -9,6 +9,12 @@ def create_app():
     db.init_app(app)
 
     @app.route('/')
+    # Файл html - в папке templates, название см. в render_template.
+    # На странице должны быть карточки книг с названием, авторами и обложкой.
+    # Имена авторов и названия книг - ссылки, которые ведут на индивидуальные страницы.
+    # (реализовано максимально некрасиво)
+    # Желательно сделать постраничную выдачу, чтобы вся база сразу не вываливалась.
+
     def index():
         books_list = Edition.query.all()
         authors_list = Author.query.all()
@@ -17,23 +23,31 @@ def create_app():
                                authors_list=authors_list)
 
     @app.route('/book/<book_id>')
+    # Здесь должны быть все сведения о книге, которые удалось получить:
+    # Название (my_book.title / my_book)
+    # Авторы (my_book.author_id - это список, надо к нему обращаться циклом)
+    # Год издания (my_book.year_of_edition)
+    # Издательство (my_book.my_publishing)
+    # ISBN (my_book.ISBN)
+    # Обложка (my_book.cover)
+    # Аннотация (my_book.annotation)
+    # Цена на наших двух площадках (нужно получать циклом из my_catalog по атрибуту price)
+    # Страница, где продается книга (атрибут url элементов из my_catalog)
+    # Названия магазинов, их логотипы (атрибуты name, logo). Название магазина можно также получить от класса Catalog по атрибуту my_shop
     def book(book_id):
         my_book = Edition.query.get(book_id)
-        authors_list = Author.query.all()
-        publishing_list = Publishing.query.all()
-        return render_template('book.html', my_book=my_book,
-                               authors_list=authors_list,
-                               publishing_list=publishing_list)
+        my_catalog = Catalog.query.filter(Catalog.book == book_id).all()
+        shop_list = Shop.query.all()
+        return render_template('book.html', my_book=my_book, my_catalog=my_catalog, shop_list=shop_list)
 
     @app.route('/author/<author_id>')
+    # Про авторов у нас почти ничего не собрано. Должен выдаваться только список его книг.
+    # Список лежит в my_author.editions, но там только названия.
+    # Нужно зайти в books-list, отфильтровать нужную книгу по названию и использовать ее атрибуты для получения любой инфы.
     def author(author_id):
-        title = 'Здесь будут сведения об авторе'
-        return render_template('base.html', title=title)
-
-    @app.route('/publishing/<publishing_id>')
-    def publishing(publishing_id):
-        title = 'Здесь будут сведения об издательстве'
-        return render_template('base.html', title=title)
+        my_author = Author.query.get(author_id)
+        books_list = Edition.query.all()
+        return render_template('author.html', my_author=my_author, books_list=books_list)
 
     @app.route('/search/')
     def search():

@@ -11,7 +11,7 @@
               <div class="col-md-8">
                 <div class="card-body">
                   {% for author in edition.my_authors %}
-                    <h5 class="card-title">{{ author }}</p></h5>
+                    <h5 class="card-title"><a href='author/{{ author.id}}'>{{ author }}</a></p></h5>
                   {% endfor %}
                   <h5><a href='/book/{{ edition.id }} '>{{ edition }}</a></h5>
                 </div>
