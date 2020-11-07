@@ -15,7 +15,7 @@
                 <div class="col-md-5" style="height: 462px;padding: 15px;">
                     <div class="form-group"><label style="font-weight: bold;">Издательство: </label><label>{{ my_book.my_publishing }}</label></div>
                     {% for author in my_book.author_id%}
-                        <div class="form-group"><label style="font-weight: bold;">Автор: </label><a href = 'http://author/{{ author.id }}'><label>{{ author }}</label></div></a>
+                        <div class="form-group"><label style="font-weight: bold;">Автор: </label><a href='http://127.0.0.1:5000/author/{{ author.id }}'><label>{{ author }}</label></div></a>
                     {% endfor %}
                     <div class="form-group"><label style="font-weight: bold;">Год издания: </label><label> {{ my_book.year_of_edition }}</label></div>
                     <div class="form-group"><label style="font-weight: bold;">ISBN: </label><label> {{ my_book.ISBN }}</label></div>
