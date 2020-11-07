@@ -6,37 +6,17 @@ import random
 from webapp import db
 from webapp.small_model import Edition, Author, Publishing, Catalog, Shop
 
-class Base:
+
+class Labirint:
     def __init__(self, sitemap_url):
+        self.sitemap_url = sitemap_url
         self.book_list = []
         self.books_data_set = []
-        self.sitemap = sitemap_url
-        self.get_html()
         self.get_url_list()
         self.get_book_data()
 
-    def get_html(self, url=None):  # Извлекает html код из URl для дальнейшего использования.
-        try:
-            if url:
-                result = requests.get(url)
-            else:
-                result = requests.get(self.sitemap)
-            result.raise_for_status()
-            self.sitemap_xml = result.text
-        except(requests.RequestException, ValueError):
-            return False
-
-    def get_url_list(self):
-        NotImplemented
-
-    def get_book_data(self):
-        NotImplemented
-
-
-class Labirint(Base):
-
     def get_url_list(self):  # Функция извлекающая ссылкни на каталоги из сайт мэпа и далее извлекающая ссылки на книги для дальнейшей обработки
-        soup = BeautifulSoup(self.sitemap_xml, 'xml')  # Извлечение списка каталогов
+        soup = BeautifulSoup(requests.get(self.sitemap_url).text, 'xml')  # Извлечение списка каталогов
         catalogs = soup.find_all('loc')
         self.res_list = []
         for catalog in catalogs:
@@ -44,9 +24,8 @@ class Labirint(Base):
                 self.res_list.append(catalog.text)
 
         for res in self.res_list:
-            self.get_html(url=res)
-            soup = BeautifulSoup(self.sitemap_xml, 'xml')
-            books = soup.find_all('loc')
+            soup = BeautifulSoup(requests.get(res).text, 'xml')
+            books = soup.find_all('loc', limit=500)
             for book in books:
                 if 'books' in book.text:
                     book_url_mod = book.text
@@ -55,8 +34,7 @@ class Labirint(Base):
 
     def get_book_data(self):
         for book in self.book_list:
-            html = self.get_html(url=book)
-            soup = BeautifulSoup(self.sitemap_xml, 'html.parser')
+            soup = BeautifulSoup(requests.get(book).text, 'html.parser')
             
             try:
                 authors_list = []
@@ -66,7 +44,7 @@ class Labirint(Base):
                 if authors_list:
                     author_check = authors_list[0].split()
             except(AttributeError):
-                authors_list = None
+                authors_list = []
 
             try:
                 title_first = soup.find('div', class_='prodtitle').find('h1').text
@@ -76,37 +54,41 @@ class Labirint(Base):
                 else:
                     title = title_first.strip()
             except(AttributeError):
-                title = None
+                title = "Не найдено"
 
             try:
                 year_of_edition = ''.join(
                     i for i in soup.find('div', class_='product-description').find('div', class_='publisher').text
                     if i.isdigit())
             except(AttributeError):
-                year_of_edition = None
+                year_of_edition = "Не найдено"
 
             try:
                 ISBN_first = soup.find('div', class_='isbn').text
                 ISBN = (ISBN_first.replace('ISBN:', '')).strip()
                 if len(ISBN) > 17:
                     for digit in ISBN:
-                        if digit.isalpha():
-                            ISBN = ISBN.replace(digit, '')
+                        if not digit.isdigit() or digit != ',' or digit != '-':
+                            ISBN = ISBN.replace(digit, '').strip().strip(',')
                     ISBN = ISBN.split(',')
                     for i in range(len(ISBN)):
                         ISBN[i] = ISBN[i].strip()
+                        if len(ISBN[i]) < 5:
+                            del ISBN[i]
+                    if not ISBN:
+                        ISBN = "Не найдено"
             except(AttributeError):
-                ISBN = None
+                ISBN = "Не найдено"
 
             try:
                 publishing = soup.find('div', class_='publisher').find('a', class_='analytics-click-js', attrs={'data-event-label': "publisher"}).text.replace('  ', ' ')
             except(AttributeError):
-                publishing = None
+                publishing = "Не найдено"
 
             try:
-                cover = soup.find('div', id='product-image').find('img')['src']
-            except(AttributeError):
-                cover = None
+                cover = soup.find('div', id='product-image').find('img')['data-src']
+            except(AttributeError, KeyError):
+                cover = "Не найдено"
             
             try:
                 annotation_first = soup.find('div', id='product-about').find('div', id='fullannotation')
@@ -115,7 +97,7 @@ class Labirint(Base):
                 else:
                     annotation = annotation_first.find('p').text.replace('  ', ' ')
             except(AttributeError):
-                annotation = None
+                annotation = "Не найдено"
 
             try:
                 price = soup.find('span', class_='buying-priceold-val-number').text + ' руб'
@@ -166,6 +148,7 @@ def save_lab_books(url):
         return new_edition
 
     shop_exists = Shop.query.filter(Shop.name == 'Лабиринт').count()
+
     if not shop_exists:
         new_shop = Shop(name='Лабиринт', logo='https://img.labirint.ru/design/logomini.png', url='https://www.labirint.ru/')
         db.session.add(new_shop)
@@ -174,36 +157,40 @@ def save_lab_books(url):
         new_shop = Shop.query.filter_by(name='Лабиринт').first()
 
     for book in books_list:
-        publishing_exists = Publishing.query.filter(Publishing.name == book['publishing']).count()
-        if not publishing_exists:
-            new_publishing = Publishing(name=book['publishing'])
-            db.session.add(new_publishing)
-            db.session.commit()
-        else:
-            new_publishing = Publishing.query.filter_by(name='ДМК Пресс').first()
-        
-        if type(book['ISBN']) == 'list':
-            new_edition = save_edition(book, book['ISBN'][-1])
-        else:
-            new_edition = save_edition(book, book['ISBN'])    
+        if book['price'] == 'Неизвестно':
+            continue
 
-        for author in book['authors_list']:
-            author_exists = Author.query.filter(Author.pseudonim == author).count()
-            if not author_exists:
-                new_author = Author(pseudonim=author, real_name=author)
-                db.session.add(new_author)
+        else:
+            publishing_exists = Publishing.query.filter(Publishing.name == book['publishing']).count()
+            if not publishing_exists:
+                new_publishing = Publishing(name=book['publishing'])
+                db.session.add(new_publishing)
                 db.session.commit()
             else:
-                new_author = Author.query.filter_by(pseudonim=author).first()
-            new_author.editions.append(new_edition)
+                new_publishing = Publishing.query.filter_by(name='ДМК Пресс').first()
+            
+            if type(book['ISBN']) == 'list':
+                new_edition = save_edition(book, book['ISBN'][-1])
+            else:
+                new_edition = save_edition(book, book['ISBN'])
+            
+            for author in book['authors_list']:
+                author_exists = Author.query.filter(Author.pseudonim == author).count()
+                if not author_exists:
+                    new_author = Author(pseudonim=author, real_name=author)
+                    db.session.add(new_author)
+                    db.session.commit()
+                else:
+                    new_author = Author.query.filter_by(pseudonim=author).first()
+                new_author.editions.append(new_edition)
 
-        item_exists = Catalog.query.filter(Catalog.url == book['url']).count()
-        if not item_exists:
-            new_catalog = Catalog(book=new_edition.id,
-                                  point_of_sell=new_shop.id,
-                                  price=book['price'], url=book['url'])
-            db.session.add(new_catalog)
-            db.session.commit()
-        else:
-            new_catalog = Catalog.query.filter_by(url=book['url']).first()
-            new_catalog.price = book['price']
+            item_exists = Catalog.query.filter(Catalog.url == book['url']).count()
+            if not item_exists:
+                new_catalog = Catalog(book=new_edition.id,
+                                      point_of_sell=new_shop.id,
+                                      price=book['price'], url=book['url'])
+                db.session.add(new_catalog)
+                db.session.commit()
+            else:
+                new_catalog = Catalog.query.filter_by(url=book['url']).first()
+                new_catalog.price = book['price']

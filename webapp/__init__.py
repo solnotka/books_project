@@ -46,8 +46,9 @@ def create_app():
     # Нужно зайти в books-list, отфильтровать нужную книгу по названию и использовать ее атрибуты для получения любой инфы.
     def author(author_id):
         my_author = Author.query.get(author_id)
-        books_list = Edition.query.all()
-        return render_template('author.html', my_author=my_author, books_list=books_list)
+        books_list = Edition.query.filter(Edition.author_id.any(id=author_id))
+        return render_template('author.html', my_author=my_author,
+                               books_list=books_list)
 
     @app.route('/search/')
     def search():

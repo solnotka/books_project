@@ -6,14 +6,14 @@
           <div class="card mb-3" style="max-width: 540px;">
             <div class="row no-gutters">
               <div class="col-md-4">
-                <img src="{{ edition.cover }}" class="card-img">
+                <a href='/book/{{ edition.id }}'><img src="{{ edition.cover }}" class="card-img"></a>
               </div>
               <div class="col-md-8">
                 <div class="card-body">
+                  <h5><a href='/book/{{ edition.id }}' style="color:#000000; font-size:14pt">{{ edition }}</a></h5>
                   {% for author in edition.my_authors %}
-                    <h5 class="card-title"><a href='author/{{ author.id}}'>{{ author }}</a></p></h5>
+                    <h5 class="card-title"><a href='author/{{ author.id}}' style="color:#000000; font-size:12pt">{{ author }}</a></p></h5>
                   {% endfor %}
-                  <h5><a href='/book/{{ edition.id }} '>{{ edition }}</a></h5>
                 </div>
               </div>
             </div>

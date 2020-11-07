@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from webapp import db
 from webapp.small_model import Edition, Author, Publishing, Catalog, Shop
+
 def get_url_list(sitemap_url):
     soup = BeautifulSoup(sitemap_url.text, 'xml')
     catalogs = soup.find_all('loc')
@@ -76,7 +77,7 @@ def get_book_data(res_list):
                 'year_of_edition': year_of_edition, 'ISBN': ISBN,
                 'annotation': annotation, 'cover': cover, 'price': price}
         
-        books_data_set.append(book)
+        books_list.append(book)
     
     return books_list
 
